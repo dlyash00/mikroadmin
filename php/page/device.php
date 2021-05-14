@@ -1,6 +1,11 @@
 <?php
 session_start();
 error_reporting(E_ALL | E_STRICT);
+
+if (isset($_SESSION['isAuth'])){
+    if (!$_SESSION['isAuth']) die ("У вас нет доступа");
+} else die ("У вас нет доступа");
+
 ?>
 
 <!DOCTYPE html>
@@ -118,25 +123,21 @@ error_reporting(E_ALL | E_STRICT);
                 {         
                     $.each(data[i], function (prop, value) { 
                         switch (prop) {
-                            case 'uptime':
-                                prop_ru = 'Время работы';
+
+                            case 'architecture-name':
+                                prop_ru = 'Архитектура ЦП';
                                 break;
 
-                            case 'version':
-                                prop_ru = 'Версия RouterOS';
-                                break;
-                            
-                            case 'free-memory':
-                                prop_ru = 'Свободно памяти ОЗУ';
-                                $('#ram-free').html(Math.round(parseInt(value)/1024) + ' MiB');
+                            case 'board-name':
+                                prop_ru = 'Наименование модели RouterBOARD';
                                 break;
 
-                            case 'total-memory':
-                                prop_ru = 'Всего памяти ОЗУ';
+                            case 'build-time':
+                                prop_ru = 'Дата и время первого запуска';
                                 break;
 
                             case 'cpu':
-                                prop_ru = 'ЦП';
+                                prop_ru = 'Модель ЦП';
                                 $('#cpu-name').html(value);
                                 break;
 
@@ -153,38 +154,65 @@ error_reporting(E_ALL | E_STRICT);
                             case 'cpu-load':
                                 prop_ru = 'Загрузка ЦП';
                                 $('#cpu-load').html(value + '%');
-                                //  var bar = document.getElementById('bar-cpu-load');
-                                //  var val2 = val + (100 - (100 - val));
-                                //  bar.style.background = '-webkit-linear-gradient(bottom, #EEDED5 ' + val + '%, #C4C4C4 ' + val2 + '%)';
+                                  var bar = document.getElementById('bar-cpu-load');
+                                  var val = value + (100 - (100 - value));
+                                  bar.style.background = '-webkit-linear-gradient(bottom, #97cff5d9 ' + value + '%, #C4C4C4 ' + val + '%)';
                                 break;
-                            
+
                             case 'free-hdd-space':
                                 prop_ru = 'Свободно памяти HDD';
                                 $('#hdd-free').html(Math.round(parseInt(value)/1024) + ' MiB');
                                 break;
+
+                            case 'free-memory':
+                                prop_ru = 'Свободно памяти ОЗУ';
+                                $('#ram-free').html(Math.round(parseInt(value)/1024) + ' MiB');
+                                break;
                             
+                            case 'platform':
+                                prop_ru = 'Платформа';
+                                break;
+
                             case 'total-hdd-space':
                                 prop_ru = 'Всего памяти HDD';
                                 break;
-                            
-                            case 'architecture-name':
-                                prop_ru = 'Архитектура';
+
+                            case 'total-memory':
+                                prop_ru = 'Всего памяти ОЗУ';
                                 break;
+
+                            case 'uptime':
+                                prop_ru = 'Продолжительность работы';
+                                break;
+
+                            case 'version':
+                                prop_ru = 'Версия RouterOS';
+                                break;  
+
+                            case 'write-sect-since-reboot':
+                                prop_ru = 'Количество записанных секторов на HDD с момента последней перезагрузки';
+                                break; 
+
+                            case 'write-sect-total':
+                                prop_ru = 'Общее количество записанных секторов';
+                                break; 
+
+                            //-------------------------------      
                             
-                            case 'software-id':
-                                prop_ru = 'Software ID';
+                            case 'features':
+                                prop_ru = 'Особенности';
                                 break;
                             
                             case 'nlevel':
                                 prop_ru = 'Уровень лицензии';
                                 break;
                             
-                            case 'upgradable-to':
-                                prop_ru = 'Обновить до';
+                            case 'software-id':
+                                prop_ru = 'Software ID';
                                 break;
-
-                            case 'features':
-                                prop_ru = 'Особенности';
+                            
+                            case 'upgradable-to':
+                                prop_ru = 'Обновляемо до';
                                 break;
 
                             default:

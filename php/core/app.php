@@ -1,47 +1,90 @@
 <?php
 
+//define('ROOT_DIR', str_replace('\\', '/', dirname(__FILE__)));
+
 error_reporting(E_ALL | E_STRICT);
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-include "api_class.php";
+include ROOT_DIR . '/core/api_class.php';
 
 class App
  {
     public $API;
+
+    public static function forcedDownloadFile($file){
+        if (file_exists($file)) {
+            header('Content-Description: File Transfer');
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename=' . basename($file));
+            header('Content-Transfer-Encoding: binary');
+            header('Expires: 0');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
+
+            readfile($file);
+         } else echo "Файл не существует\n";
+    }
+
+    public static function sendCommand($ip, $user, $password, $cmd){
+        $API = new RouterosAPI();
+
+        if ($API->connect($ip, $user, $password)){
+
+            $API->comm($cmd);
+            
+            $API->disconnect();
+
+            return true;
+        } else return false;
+    }
+
+    public static function sendMailAttachment($mailTo, $from, $subject, $message, $file){
+
+        $separator = "===="; // разделитель в письме
+        // Заголовки для письма
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "From: $from\nReply-To: $from\n"; // задаем от кого письмо
+        $headers .= "Content-Type: multipart/mixed; boundary=\"$separator\""; // в заголовке указываем разделитель
+
+        $bodyMail = "--$separator\n"; // начало тела письма, выводим разделитель
+        $bodyMail .= "Content-type: text/html; charset='utf-8'\n"; // кодировка письма
+        $bodyMail .= "Content-Transfer-Encoding: quoted-printable"; // задаем конвертацию письма
+        $bodyMail .= "Content-Disposition: attachment; filename==?utf-8?B?" . base64_encode(basename($file))."?=\n"; // задаем название файла
+        $bodyMail .= $message."\n"; // добавляем текст письма
+        $bodyMail .= "--$separator\n";
+
+        $bodyMail .= "Content-Type: application/zip; name==?utf-8?B?" . base64_encode(basename($file))."?=\n"; 
+        $bodyMail .= "Content-Transfer-Encoding: base64\n"; // кодировка файла
+        $bodyMail .= "Content-Disposition: attachment; filename==?utf-8?B?" . base64_encode(basename($file))."?=\n";
+        $bodyMail .= chunk_split(base64_encode(file_get_contents($file)))."\n"; // кодируем и прикрепляем файл
+        $bodyMail .= "--" . $separator . "--\n";
+
+        return mail($mailTo, $subject, $bodyMail, $headers);
+    }
 
     public static function isConnect($ip, $username, $password){
         $API = new RouterosAPI();
         return $API->connect($ip, $username, $password);
     }
 
-    public static function routerMakeBackup($ip, $user, $password, $device, $mode){
+    public static function routerMakeBackupFile($ip, $user, $password, $hostname){
         $API = new RouterosAPI();
 
         if ($API->connect($ip, $user, $password)){
 
-            switch ($mode) {
-                case 'backup':
-                    $API->comm("/system/backup/save", array(
-                        "name" => "$device--$user--backup--config",
-                    ));
-                    $API->disconnect();
-                    return true;
-                    break;
-                
-                case 'rsc':
-                    $API->comm("/export", array(
-                        "file" => "$device--$user--backup--config",
-                    ));
-                    $API->disconnect();
-                    return true;
-                    break;
-                    
-                default:
-                    return false;
-                    break;
-            }
+            $API->comm("/system/backup/save", array(
+                "name" => "binary",
+            ));
+
+            $API->comm("/export", array(
+                "file" => "config",
+            ));
+            
+            $API->disconnect();
+
+            return true;
         } else return false;
-    }
+    } 
 
     public static function UploadSystemInfo($ip, $user, $password){
         $API = new RouterosAPI();
@@ -77,35 +120,57 @@ class App
         } else exit;
     }
 
-    public static function GetBackupFile($ip, $user, $password, $device){
+    public static function GetBackupFile($id){
+        
+         include_once "mysql_db_connecting.php";
+
+         $query = ("SELECT `ip_address`, `user`, `password`, `device_name` FROM `device_user` WHERE `id` = '$id'");
+         $result = mysqli_query($link, $query);
+         $device = mysqli_fetch_assoc($result);
+         $close = mysqli_close($link);
+
+         $ip = $device["ip_address"];
+         $user = $device["user"];
+         $password = $device["password"]; 
+         $device = $device["device_name"];
+         
          $mode = 'rsc';
-         if (App::routerMakeBackup($ip, $user, $password, $device,  $mode)){
+         if (App::routerMakeBackupFile($ip, $user, $password, $device)){
             $time = time();
-            $date = date('d-m-Y', $time);
+            $date = date("[d.m.Y]_H-i-s");
    
-            $local_file = "../files/$date--$device--$user." . $mode;
-            $server_file = "ftp://$user:$password@$ip/$device--$user--backup--config." . $mode;
+            $local_file = ROOT_DIR . "/../files/$date--$device--$user." . $mode;
+            $server_file = "ftp://$user:$password@$ip/config." . $mode;
    
             if (copy($server_file, $local_file)) {
                if (file_exists($local_file)) {
-   
-                   header('Content-Description: File Transfer');
-                   header('Content-Type: application/octet-stream');
-                   header('Content-Disposition: attachment; filename=' . basename($local_file));
-                   header('Content-Transfer-Encoding: binary');
-                   header('Expires: 0');
-                   header('Cache-Control: must-revalidate');
-                   header('Pragma: public');
-   
-                   readfile($local_file);
+                   App::forcedDownloadFile($local_file);
                    unlink($local_file);
-                }
-            }
+                } else echo "Не удалось создать файл  \n";
+            } else echo "Не удалось подключиться к устройству $device \n";
          }
     }
     
-    public static function GetBackupZip($devices){
-        $mode = 'rsc';
+    public static function GetBackupZip($ids){
+
+        $newarray = implode(", ", $ids);
+        
+        require "mysql_db_connecting.php";
+
+        $query = ("SELECT `ip_address`, `user`, `password`, `device_name` FROM `device_user` WHERE `id` IN ($newarray) ");
+        $result = mysqli_query($link, $query);
+
+        $devices = array();
+
+		while ($row = mysqli_fetch_assoc($result)){
+            array_push($devices, $row);
+        }
+        $close = mysqli_close($link);
+        
+        $time = time();
+        $date = date('d.m.Y', $time);
+        $full_date = date("[d.m.Y] H-i-s");
+
         for ($i = 0; $i < count($devices); $i++) {
 
             $ip = $devices[$i]["ip_address"];
@@ -113,56 +178,60 @@ class App
             $password = $devices[$i]["password"];
             $hostname = $devices[$i]["device_name"];
 
-            if (App::routerMakeBackup($ip, $user, $password, $hostname, $mode)){
-                $time = time();
-                $date = date('d-m-Y', $time);
-       
-                $local_file = "../files/$date--$hostname--$user." . $mode;
-                $server_file = "ftp://$user:$password@$ip/$hostname--$user--backup--config." . $mode;
-       
-                if (copy($server_file, $local_file)) {
-                   if (file_exists($local_file)) {
-                    $time = time();
-                    $date = date('d-m-Y', $time);
-    
-                    $zip = new ZipArchive(); 
-                    $zipFile = "../files/$date--backup.zip";
-    
-                    if($zip->open($zipFile, ZipArchive::CREATE) !== true){
-                        exit('errors');
-                    }
-    
-                    $zip->addFile($local_file);
-                    $zip->close();
-                    }
+            $modes = ["rsc", "backup"];
 
-                    unlink($local_file);
+            if (App::routerMakeBackupFile($ip, $user, $password, $hostname)){
+
+                foreach ($modes as $index => $value) {
+
+                    $local_dir = ROOT_DIR . "/../files/";
+                    $local_file_name = "$date--$hostname--$user." . $value;
+                    $local_file_path =  $local_dir . $local_file_name;
+                    $server_file = ($value == "backup") ? "ftp://$user:$password@$ip/binary." . $value : "ftp://$user:$password@$ip/config." . $value;
+        
+                    if (copy($server_file, $local_file_path)) {
+                        if (file_exists($local_file_path)) {
+                                $zip = new ZipArchive(); 
+                                $zipFile =  ROOT_DIR . "/../files/$full_date--backup.zip";
+                
+                                if($zip->open($zipFile, ZipArchive::CREATE) !== true){
+                                    exit('errors');
+                                }
+                
+                                $zip->addFile($local_file_path, "$hostname/$local_file_name");
+                                $zip->close();
+                        } 
+                        unlink($local_file_path);
+                    }
                 }
+                
             }
         }
-
-        header('Content-Description: File Transfer');
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename=' . basename($zipFile));
-        header('Content-Transfer-Encoding: binary');
-        header('Expires: 0');
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
-    
-        readfile($zipFile);
-        //unlink($zipFile);
+         
+        if(file_exists($zipFile)){
+            $host = $_SERVER['HTTP_HOST'];
+            print_r("https://$host/files/$full_date--backup.zip");
+            //unlink($zipFile);
+            //App::sendMailAttachment('binikup@gmail.com', 'binikup@gmail.com', 'Бэкап конфигурации устройств', 'Архив конфигураций:', $zipFile);
+        } else echo "Не удалось создать архив \n";
     }
 
     public static function GetUserDevices($global_user){
          include_once "mysql_db_connecting.php";
 
-         $query = ("SELECT `id`, `device_name`, `password` , `user`, `ip_address`, `comment` FROM `device_user` WHERE `id_global_user` = (SELECT `id` FROM `global_user` WHERE `name` = '$global_user')");
+         $query = ("SELECT `id`, `device_name`, `user`, `password`, `ip_address`, `comment` FROM `device_user` WHERE `id_global_user` = (SELECT `id` FROM `global_user` WHERE `name` = '$global_user')");
          $result = mysqli_query($link, $query);
          $close = mysqli_close($link);
 
          $records = array();
 		 while($row = mysqli_fetch_assoc($result)){
             array_push($records, $row);
+         }
+         for ($i=0; $i < count($records); $i++) { 
+             if(App::isConnect($records[$i]["ip_address"], $records[$i]["user"], $records[$i]["password"])){
+                $records[$i]["connection"] = 'connected';
+             } else $records[$i]["connection"] = 'disconnected';
+             unset($records[$i]["password"]);
          }
          return json_encode($records, JSON_UNESCAPED_UNICODE);
     }
@@ -200,6 +269,26 @@ class App
             array_push($records, $row);
          }
          return $records;
+    }
+
+    public static function RebootAndShutdownDevices($ids, $opt){
+        $newarray = implode(", ", $ids);
+        
+        require "mysql_db_connecting.php";
+
+        $query = ("SELECT `ip_address`, `user`, `password` FROM `device_user` WHERE `id` IN ($newarray) ");
+        $result = mysqli_query($link, $query);
+
+        $devices = array();
+
+		while ($row = mysqli_fetch_assoc($result)){
+            array_push($devices, $row);
+        }
+        $close = mysqli_close($link);
+        for ($i=0; $i < count($devices); $i++) { 
+            App::sendCommand($devices[$i]["ip_address"], $devices[$i]["user"], $devices[$i]["password"], $opt);
+        }
+        echo "Команда выполнена";
     }
 
  }

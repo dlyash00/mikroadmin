@@ -1,7 +1,7 @@
 <?php
-	$host = 'mikroadmin'; 		// Адрес сервера
-	$database = 'mikroadmin'; 	// Имя базы данных
-	$user = 'mysql'; 			// Имя пользователя
-	$password = 'mysql'; 		// Пароль
-	$link = mysqli_connect($host, $user, $password, $database);
+	$db_host = 'mikroadmin'; 		// Адрес сервера
+	$db_database = 'mikroadmin'; 	// Имя базы данных
+	$db_user = 'mysql'; 			// Имя пользователя
+	$db_password = 'mysql'; 		// Пароль
+	$link = mysqli_connect($db_host, $db_user, $db_password, $db_database);
 ?>

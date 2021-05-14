@@ -20,6 +20,7 @@
     $close = mysqli_close($link);
 
     if($this_password == $records[0]['password']){
+		$_SESSION['isAuth'] = true;
         header('Location: page/home.php');
     } else echo 'Неверные данные';
  ?>

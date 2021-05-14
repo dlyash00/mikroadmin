@@ -1,0 +1,1 @@
+%progdir%\modules\php\%phpdriver%\php-win.exe -c %progdir%\modules\php\%phpdriver%\php.ini -q -f %sitedir%\mikroadmin\php\backup.php

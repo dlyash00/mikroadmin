@@ -1,6 +1,11 @@
 <?php
 session_start();
 error_reporting(E_ALL | E_STRICT);
+
+if (isset($_SESSION['isAuth'])){
+    if (!$_SESSION['isAuth']) die ("У вас нет доступа");
+} else die ("У вас нет доступа");
+
 ?>
 
 <!DOCTYPE html>
@@ -65,8 +70,8 @@ error_reporting(E_ALL | E_STRICT);
 
 </div>
 </body>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+<script src="../../js/jquery-3.6.0.min.js"></script>
+<script src="../../js/jquery-ui-1.12.1/jquery-ui.min.js"></script>
 <script>
 
     function getTime()
@@ -76,36 +81,6 @@ error_reporting(E_ALL | E_STRICT);
     }
 
     $('document').ready(function () {
-
-        $.ajax({
-            type: "POST",
-            url: "../controller.php",
-            data: {GET_DEVICE_TABLE: ''},
-            success: function (res) {
-                data = JSON.parse(res);
-                console.log(data);
-
-                $('#table-device-content').empty();         
-                $.each(data, function (prop, value) { 
-                    $('#table-device-content').append(
-                    `<tr>
-                        <td>${value.id}</td>
-                        <td>${value.name}</td>
-                        <td>${value.ip_address}</td>
-                        <td>${value.comment}</td>
-                        <td><center>${value.user}</center></td>
-                        <td><p class = "text-medium-green"><img src="../../img/done.svg" height = "12px">&nbsp Соединено</p></td>
-                        <td>
-                            <img src="../../img/dashboard.svg" height = "25px">&nbsp
-                            <img src="../../img/edit.svg" height = "25px">
-                            <a href = "../controller.php?delete_device=${value.id}" title = "Удалить устройство"><img src="../../img/delete.svg" height = "25px"></a>&nbsp
-                            <a href = "../controller.php?make_backup_ip=${value.ip_address}&make_backup_user=${value.user}&make_backup_password=${value.password}&make_backup_device=${value.name}" title = "Скачать файл конфигурации"><img src="../../img/backup-copy.svg" height = "25px"></a>
-                        </td>
-                    </tr>`
-                    );
-                });
-            }
-        });
 
         $('#lnk-toMakeBackup').click(function (e) { 
             e.preventDefault();
