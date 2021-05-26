@@ -13,14 +13,15 @@ if (isset($_SESSION['isAuth'])){
 <head>
     <meta charset="UTF-8">
 	<link rel="stylesheet" type="text/css" href="../../css/stylesheet.css"> 
-    <title>Устройство</title>
+    <link rel = "icon" type = "image/svg" href = "../../img/router-host1.svg"/>
+    <title>&nbsp Устройство <?php echo $_SESSION['device'][0]['device_name'] ?></title>
 </head>
 <body>
 <div class = "wrapper">
 
     <!-- Заголовок -->
     <header>
-		<div class = "logo"><a href="home.php"><img src="../../img/MikroTik_logo.svg" alt="Logo" height = "35px"></a></div>
+		<div class = "logo"><a href="home.php"><img src="../../img/mikroadmin_logo.svg" alt="Logo" height = "25px"></a></div>
 		<div class = "title">
             <p style = "font-size: 1.2em; font-weight: 200; line-height: 0.4em; margin-bottom: 5px"><img src="../../img/user1.svg" height = "20px">&nbsp&nbspПользователь&nbsp <?php echo $_SESSION['device'][0]['user'] ?> <b></b></p>
             <p style = "font-weight: 200; line-height: 0.4em; margin-top: 5px"><img src="../../img/router-host1.svg" height = "25px">&nbsp&nbspУстройство <b><?php echo $_SESSION['device'][0]['device_name'] ?></b> на <b><?php echo $_SESSION['device'][0]['ip_address'] ?></b></p>
@@ -57,6 +58,7 @@ if (isset($_SESSION['isAuth'])){
                     <p>&nbsp</p>
                     <p>Загрузка ЦП</p>
                     <p id = "cpu-name"></p>
+                    <img src="../../img/cpu.svg" height="70px" style="position: relative; top: -86px; left: 185px; mix-blend-mode: soft-light;">
                 </div>
 
                 <div class = "bar" id = "bar-cpu-freq">
@@ -115,7 +117,7 @@ if (isset($_SESSION['isAuth'])){
             data: {SYS_DOWNLOAD_INFO: ''},
             success: function (res){
                 data = JSON.parse(res);
-                console.log(getTime(), ': Информация о системе устройства загружена', data);
+                //console.log(getTime(), ': Информация о системе устройства загружена', data);
                 
                 $('#info').empty();
                 let prop_ru = '';
@@ -128,8 +130,12 @@ if (isset($_SESSION['isAuth'])){
                                 prop_ru = 'Архитектура ЦП';
                                 break;
 
+                            case 'bad-blocks':
+                                prop_ru = 'Испорченных секторов';
+                                break;
+
                             case 'board-name':
-                                prop_ru = 'Наименование модели RouterBOARD';
+                                prop_ru = 'Модель RouterBOARD';
                                 break;
 
                             case 'build-time':
@@ -154,19 +160,28 @@ if (isset($_SESSION['isAuth'])){
                             case 'cpu-load':
                                 prop_ru = 'Загрузка ЦП';
                                 $('#cpu-load').html(value + '%');
-                                  var bar = document.getElementById('bar-cpu-load');
-                                  var val = value + (100 - (100 - value));
-                                  bar.style.background = '-webkit-linear-gradient(bottom, #97cff5d9 ' + value + '%, #C4C4C4 ' + val + '%)';
+                                  let bar = document.getElementById('bar-cpu-load');
+                                  let end = Number.parseInt(value);
+                                  let jitter = 15;
+                                  let start = end - jitter;
+
+                                  bar.style.background = '-webkit-linear-gradient(90deg, #97cff5d9 ' + start + '%, #C4C4C4 ' + end + '%)';
+                                break;
+                            
+                            case 'factory-software':
+                                prop_ru = 'Заводская версия RouterOS';
                                 break;
 
                             case 'free-hdd-space':
                                 prop_ru = 'Свободно памяти HDD';
-                                $('#hdd-free').html(Math.round(parseInt(value)/1024) + ' MiB');
+                                $('#hdd-free').html(parseFloat(value)/(1024*1000) + ' MiB');
+                                value = parseFloat(value)/(1024*1000) + ' MiB';
                                 break;
 
                             case 'free-memory':
                                 prop_ru = 'Свободно памяти ОЗУ';
-                                $('#ram-free').html(Math.round(parseInt(value)/1024) + ' MiB');
+                                $('#ram-free').html(parseFloat(value)/(1024*1000) + ' MiB');
+                                value = parseFloat(value)/(1024*1000) + ' MiB';
                                 break;
                             
                             case 'platform':
@@ -175,10 +190,12 @@ if (isset($_SESSION['isAuth'])){
 
                             case 'total-hdd-space':
                                 prop_ru = 'Всего памяти HDD';
+                                value = parseFloat(value)/(1024*1000) + ' MiB';
                                 break;
 
                             case 'total-memory':
                                 prop_ru = 'Всего памяти ОЗУ';
+                                value = parseFloat(value)/(1024*1000) + ' MiB';
                                 break;
 
                             case 'uptime':

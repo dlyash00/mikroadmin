@@ -13,7 +13,8 @@ if (isset($_SESSION['isAuth'])){
 <head>
     <meta charset="UTF-8">
 	<link rel="stylesheet" type="text/css" href="../../css/stylesheet.css"> 
-    <title>Администратор</title>
+    <link rel = "icon" type = "image/svg" href = "../../img/admin.svg"/>
+    <title>Панель управления</title>
 </head>
 <body>
 <div class = "wrapper">
@@ -35,9 +36,9 @@ if (isset($_SESSION['isAuth'])){
 
     <!-- Заголовок -->
     <header>
-		<div class = "logo"><a href="#"><img src="../../img/MikroTik_logo.svg" alt="Logo" height = "35px"></a></div>
+		<div class = "logo"><a href="#"><img src="../../img/mikroadmin_logo.svg" alt="Logo" height = "25px"></a></div>
 		<div class = "title">
-            <p class = "text-black"><img src="../../img/user1.svg" height = "25px">&nbsp&nbspАдминистратор</p>
+            <p class = "text-black"><img src="../../img/maintenance.svg" height = "30px">&nbsp&nbspПанель управления</p>
         </div>
 	</header>
 
@@ -47,17 +48,13 @@ if (isset($_SESSION['isAuth'])){
         <!-- Сайд-бар -->
         <aside>
             <p></p>
-
             <!-- Меню навигации -->
             <nav>
                 <div class = "accordion">
 
-                    <button>Панель управления</button>
-                    <div></div>
-
                     <button>Действия</button>
                     <div>
-                        <div class = "nav-link"><p><img src = "../../img/download.svg" height = "13px">&nbsp <a id = "lnk_toMakeZip">Загрузить бэкап-архив</a></p></div>
+                        <div class = "nav-link"><p><img src = "../../img/download.svg" height = "13px">&nbsp <a id = "lnk_toMakeZip">Сделать бэкап-архив</a></p></div>
                         <!-- <div class = "nav-link"><p><img src = "../../img/task_manager.svg" height = "13px">&nbsp <a id = "lnk_taskManager">Запланированный бэкап</a></p></div> -->
                         <div class = "nav-link"><p><img src = "../../img/reboot.svg" height = "15px">&nbsp <a id = "lnk_reboot">Перезагрузить устройства</a></p></div>
                         <div class = "nav-link"><p><img src = "../../img/poweroff.svg" height = "13px">&nbsp <a id = "lnk_shutdown">Выключить устройства</a></p></div>
@@ -71,8 +68,7 @@ if (isset($_SESSION['isAuth'])){
 
         <!-- Контент -->
         <article>
-
-            <p class = "text-medium" id = "todownload">Панель управления</p>
+            <p class = "text-medium" style = "margin-bottom: 10px;"><img src="../../img/control.svg" height = "20px" id = "img-control-table">&nbsp Устройства</p>
             <div id = "table-device">
                 <button id = "btn-add-device"><img src="../../img/add.svg" height = "12px"> Добавить устройство</button>
                 <table>
@@ -88,8 +84,19 @@ if (isset($_SESSION['isAuth'])){
                     <tbody id = "table-device-content"></tbody>
                 </table>
             </div>
-        </article>
 
+            <p class = "text-medium" style = "margin: 20px 0 10px 0;"><img src="../../img/folder.svg" height = "20px" id = "img-backup-table">&nbsp Журнал коппирования резервных конфигураций (бэкап)</p>
+            <table id = "table-backup">
+                <thead>
+                    <th>Дата</th>
+                    <th>Время</th>
+                    <th>Название устройства</th>
+                    <th>Статус</th>
+                </thead>
+                <tbody id = "table-backup-body">
+                </tbody>
+            </table>
+        </article>
     </main>
 
 </div>
@@ -121,7 +128,6 @@ if (isset($_SESSION['isAuth'])){
                 $('#table-device-content').empty(); 
                         
                 $.each(data, function (prop, value) { 
-                    let connection_label = (value.connection == 'connected') ? ('<td><p class = "text-medium-green"><img src="../../img/done.svg" height = "12px">&nbsp Соединено </p></td>') : ('<td><p class = "text-medium-red"><img src="../../img/cross.svg" height = "12px">&nbsp Нет соединения </p></td>');
                     $('#table-device-content').append(
                     `<tr>
                         <td>${value.id}</td>
@@ -129,11 +135,12 @@ if (isset($_SESSION['isAuth'])){
                         <td>${value.ip_address}</td>
                         <td>${value.comment}</td>
                         <td><center>${value.user}</center></td>
-                        ${connection_label}
+                        ${(value.connection == 'connected') ? ('<td><p class = "badge badge-green text-regular"><img src="../../img/done.svg" height = "16px">&nbsp Соединено </p></td>') : ('<td><p class = "badge badge-red text-regular"><img src="../../img/cross.svg" height = "12px">&nbsp Нет соединения </p></td>')}
                         <td>
-                            <a href = "../controller.php?select_device=${value.id}" title = "Перейти к устройству"><img src="../../img/dashboard.svg" height = "25px"></a>&nbsp
-                            <a href = "../controller.php?delete_device=${value.id}" title = "Удалить устройство"><img src="../../img/delete.svg" height = "25px"></a>&nbsp
-                            <a href = "../controller.php?make_backup_id=${value.id}" title = "Скачать файл конфигурации"><img src="../../img/backup-copy.svg" height = "25px"></a>
+                            ${(value.connection == 'connected') ? (`<a href = "../controller.php?select_device=${value.id}" target = "_blank" title = "Перейти к устройству"><img src="../../img/dashboard.svg" height = "25px"></a>&nbsp`) : ('')}
+                            ${(value.connection == 'connected') ? (`<a href = "../controller.php?make_backup_id=${value.id}" target = "_blank" title = "Скачать файл конфигурации"><img src="../../img/backup-copy.svg" height = "25px"></a>&nbsp | &nbsp`) : ('')}
+                            ${(value.connection == 'connected') ? (`<a href = "../controller.php?reboot_id=${value.id}" title = "Перезагрузить устройство"><img src="../../img/reboot.svg" height = "25px"></a> &nbsp | &nbsp`) : ('')}
+                            <a href = "../controller.php?delete_device=${value.id}" title = "Удалить устройство"><img src="../../img/delete.svg" height = "24px"></a>
                         </td>
                     </tr>`
                     );
@@ -141,8 +148,54 @@ if (isset($_SESSION['isAuth'])){
             }
         });
 
+        $.ajax({
+            type: "POST",
+            url: "../controller.php",
+            data: {GET_BACKUP_TABLE: 'date, time'},
+            beforeSend: function(){
+                $('#table-backup-body').append(
+                    '<tr><td align = "center" colspan = "4"><img src="../../img/g0R5.gif" height = "25px"> &nbspПодготовка информации</td></tr>'
+                );
+            },
+            success: function (res) {
+                data = JSON.parse(res);
+                $('#table-backup-body').empty();
+
+                let prev_date = ' ';
+                let prev_time = ' ';
+
+                $.each(data, function (prop, value) { 
+
+                    $('#table-backup-body').append(
+                    `<tr>
+                        ${(value.date == prev_date) ? (`<td></td>`) : (`<td><img src="../../img/date.svg" height = "20px">&nbsp ${value.date}</td>`)}
+                        ${(value.time == prev_time) ? (`<td></td>`) : (`<td><img src="../../img/clock.svg" height = "20px">&nbsp ${value.time}</td>`)}
+                        <td>${value.device_name}</td>
+                        ${(value.status == '1') ? ('<td><p class = "text-regular text-green"><img src="../../img/done.svg" height = "16px">&nbsp Успешно </p></td>') : ('<td><p class = "text-regular text-red"><img src="../../img/cross.svg" height = "12px">&nbsp Не выполнено </p></td>')}
+                    </tr>`
+                    );
+                    prev_date = value.date;
+                    prev_time = value.time;
+                });
+            }
+        });
+
+        $('#table-device').hide();
+        $('#table-backup').hide();
+
+        $('#img-control-table').click(function (e) { 
+            e.preventDefault();
+            ($('#table-device').css('display') == "none") ? $('#table-device').show(100) : $('#table-device').hide(100);      
+        });
+
+        $('#img-backup-table').click(function (e) { 
+            e.preventDefault();
+            ($('#table-backup').css('display') == "none") ? $('#table-backup').show(100) : $('#table-backup').hide(100);       
+        });
+
         $('.accordion').accordion({
             collapsible: true,
+            active: false,
 	        heightStyle: 'content',
             animate: {
                 duration: 200
@@ -202,7 +255,7 @@ if (isset($_SESSION['isAuth'])){
                                                         })
                         },
                 success: function (res) {
-                    window.open(res);
+                    console.log(res);
                 }
             });
         });

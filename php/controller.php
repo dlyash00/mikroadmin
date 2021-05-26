@@ -29,6 +29,10 @@ include_once ROOT_DIR . "/core/app.php";
         print_r(App::GetUserDevices($_SESSION['name']));
 	}
 
+    if(isset($_POST['GET_BACKUP_TABLE'])){
+        print_r(App::GetUserBackups($_POST['GET_BACKUP_TABLE']));
+	}
+
     if(isset($_POST['ADD_DEVICE'])){
         $ip = $_POST['ADD_DEVICE']['ip'];
         $user = $_POST['ADD_DEVICE']['user'];
@@ -59,5 +63,11 @@ include_once ROOT_DIR . "/core/app.php";
         $id = $_GET['make_backup_id'];
         App::GetBackupFile($id);
     }
+
+    if(isset($_GET['reboot_id'])){
+        $id = $_GET['reboot_id'];
+        App::RebootAndShutdownDevices($id, "/system/reboot");
+    }
+
 
 ?>

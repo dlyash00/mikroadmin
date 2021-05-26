@@ -9,7 +9,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-	<link rel="stylesheet" type="text/css" href="css/stylesheet.css"> 
+	<link rel = "stylesheet" type = "text/css" href="css/stylesheet.css"> 
+	<link rel = "icon" type = "image/svg" href = "img/admin.svg"/>
     <title>Авторизация</title>
 </head>
 <body>
@@ -17,7 +18,7 @@
 
 	<!-- Заголовок -->
 	<header>
-		<div class = "logo"><img src="img/MikroTik_logo.svg" alt="Logo" height = "35px"></div>
+		<div class = "logo"><img src="../../img/mikroadmin_logo.svg" alt="Logo" height = "25px"></div>
 		<div class = "title"><h1>Авторизация</h1></div>
 	</header>
 

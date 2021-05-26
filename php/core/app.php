@@ -7,6 +7,8 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 include ROOT_DIR . '/core/api_class.php';
 
+define("KEY", "1234567890abcdefg");
+
 class App
  {
     public $API;
@@ -67,7 +69,7 @@ class App
         return $API->connect($ip, $username, $password);
     }
 
-    public static function routerMakeBackupFile($ip, $user, $password, $hostname){
+    public static function routerMakeBackupFile($ip, $user, $password){
         $API = new RouterosAPI();
 
         if ($API->connect($ip, $user, $password)){
@@ -124,7 +126,7 @@ class App
         
          include_once "mysql_db_connecting.php";
 
-         $query = ("SELECT `ip_address`, `user`, `password`, `device_name` FROM `device_user` WHERE `id` = '$id'");
+         $query = ("SELECT `ip_address`, es_decrypt(`user`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `user`, aes_decrypt(`password`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `password`, `device_name` FROM `device_user` WHERE `id` = '$id'");
          $result = mysqli_query($link, $query);
          $device = mysqli_fetch_assoc($result);
          $close = mysqli_close($link);
@@ -154,10 +156,11 @@ class App
     public static function GetBackupZip($ids){
 
         $newarray = implode(", ", $ids);
+        $done_ids = array();
         
         require "mysql_db_connecting.php";
 
-        $query = ("SELECT `ip_address`, `user`, `password`, `device_name` FROM `device_user` WHERE `id` IN ($newarray) ");
+        $query = ("SELECT `id`, `ip_address`, aes_decrypt(`user`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `user`, aes_decrypt(`password`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `password`, `device_name` FROM `device_user` WHERE `id` IN ($newarray) ");
         $result = mysqli_query($link, $query);
 
         $devices = array();
@@ -165,10 +168,15 @@ class App
 		while ($row = mysqli_fetch_assoc($result)){
             array_push($devices, $row);
         }
+
         $close = mysqli_close($link);
         
         $time = time();
         $date = date('d.m.Y', $time);
+
+        $date_for_db = date('Y-m-d', $time); 
+        $time_for_db = date('H:i:s', $time);
+
         $full_date = date("[d.m.Y] H-i-s");
 
         for ($i = 0; $i < count($devices); $i++) {
@@ -177,10 +185,11 @@ class App
             $user = $devices[$i]["user"];
             $password = $devices[$i]["password"];
             $hostname = $devices[$i]["device_name"];
+            $id_device = $devices[$i]["id"];
 
             $modes = ["rsc", "backup"];
 
-            if (App::routerMakeBackupFile($ip, $user, $password, $hostname)){
+            if (App::routerMakeBackupFile($ip, $user, $password)){
 
                 foreach ($modes as $index => $value) {
 
@@ -200,26 +209,35 @@ class App
                 
                                 $zip->addFile($local_file_path, "$hostname/$local_file_name");
                                 $zip->close();
-                        } 
+                                $done_ids[$id_device] = "1";
+                        } else {
+                            $done_ids[$id_device] = "0";
+                        }
                         unlink($local_file_path);
-                    }
+                    } else {
+                        $done_ids[$id_device] = "0";
+                    } 
                 }
                 
-            }
+            } else {
+                $done_ids[$id_device] = "0";
+            } 
         }
          
         if(file_exists($zipFile)){
-            $host = $_SERVER['HTTP_HOST'];
-            print_r("https://$host/files/$full_date--backup.zip");
-            //unlink($zipFile);
-            //App::sendMailAttachment('binikup@gmail.com', 'binikup@gmail.com', 'Бэкап конфигурации устройств', 'Архив конфигураций:', $zipFile);
+            require "mysql_db_connecting.php";
+            foreach ($done_ids as $id => $status) {
+                $query = ("INSERT INTO `device_backup` (`id_device`, `date`, `time`, `status`) VALUES ('$id', '$date_for_db', '$time_for_db', '$status')");
+                $result = mysqli_query($link, $query); 
+            }
+            $close = mysqli_close($link);
         } else echo "Не удалось создать архив \n";
     }
 
     public static function GetUserDevices($global_user){
          include_once "mysql_db_connecting.php";
 
-         $query = ("SELECT `id`, `device_name`, `user`, `password`, `ip_address`, `comment` FROM `device_user` WHERE `id_global_user` = (SELECT `id` FROM `global_user` WHERE `name` = '$global_user')");
+         $query = ("SELECT `id`, `device_name`, aes_decrypt(`user`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `user`, aes_decrypt(`password`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `password`, `ip_address`, `comment` FROM `device_user` WHERE `id_global_user` = (SELECT `id` FROM `global_user` WHERE `name` = '$global_user')");
          $result = mysqli_query($link, $query);
          $close = mysqli_close($link);
 
@@ -227,13 +245,28 @@ class App
 		 while($row = mysqli_fetch_assoc($result)){
             array_push($records, $row);
          }
-         for ($i=0; $i < count($records); $i++) { 
+
+         for ($i = 0; $i < count($records); $i++) { 
              if(App::isConnect($records[$i]["ip_address"], $records[$i]["user"], $records[$i]["password"])){
                 $records[$i]["connection"] = 'connected';
              } else $records[$i]["connection"] = 'disconnected';
              unset($records[$i]["password"]);
          }
          return json_encode($records, JSON_UNESCAPED_UNICODE);
+    }
+
+    public static function GetUserBackups($filter){
+        require "mysql_db_connecting.php";
+
+        $query = ("SELECT `date`, `time`, `status`, `device_name` FROM `device_user`, `device_backup` WHERE `id_device` = `id` ORDER BY '$filter'");
+        $result = mysqli_query($link, $query);
+
+        $juornal = array();
+
+		while ($row = mysqli_fetch_assoc($result)){
+            array_push($juornal, $row);
+        }
+        return json_encode($juornal);
     }
 
     public static function DeleteUserDevice($id){
@@ -249,7 +282,7 @@ class App
     public static function AddDevice($ip, $login, $pass, $name, $comment, $global_user){
         include_once "mysql_db_connecting.php";
 
-         $query = ("INSERT INTO `device_user`(`ip_address`, `user`, `password`, `device_name`, `comment`, `id_global_user`) VALUES ('$ip', '$login', '$pass', '$name', '$comment', (SELECT `id` FROM `global_user` WHERE `name` = '$global_user'))");
+         $query = ("INSERT INTO `device_user`(`ip_address`, `user`, `password`, `device_name`, `comment`, `id_global_user`) VALUES ('$ip', aes_encrypt('$login', UNHEX('F3229A0B371ED2D9441B830D21A390C3')), aes_encrypt('$pass', UNHEX('F3229A0B371ED2D9441B830D21A390C3')), '$name', '$comment', (SELECT `id` FROM `global_user` WHERE `name` = '$global_user'))");
          
          if ($result = mysqli_query($link, $query)){
             $close = mysqli_close($link);
@@ -260,7 +293,7 @@ class App
     public static function GetDeviceById($id){
         include_once "mysql_db_connecting.php";
 
-         $query = ("SELECT `ip_address`, `user`, `password`, `device_name` FROM `device_user` WHERE `id` = '$id'");
+         $query = ("SELECT `ip_address`, aes_decrypt(`user`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `user`, aes_decrypt(`password`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `password`, `device_name` FROM `device_user` WHERE `id` = '$id'");
          $result = mysqli_query($link, $query);
          $close = mysqli_close($link);
 
@@ -272,11 +305,13 @@ class App
     }
 
     public static function RebootAndShutdownDevices($ids, $opt){
-        $newarray = implode(", ", $ids);
+
+        $newarray = (is_array($ids)) ? implode(", ", $ids) : $ids;
+        
         
         require "mysql_db_connecting.php";
 
-        $query = ("SELECT `ip_address`, `user`, `password` FROM `device_user` WHERE `id` IN ($newarray) ");
+        $query = ("SELECT `ip_address`, aes_decrypt(`user`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `user`, aes_decrypt(`password`, UNHEX('F3229A0B371ED2D9441B830D21A390C3')) AS `password` FROM `device_user` WHERE `id` IN ($newarray) ");
         $result = mysqli_query($link, $query);
 
         $devices = array();
@@ -288,7 +323,10 @@ class App
         for ($i=0; $i < count($devices); $i++) { 
             App::sendCommand($devices[$i]["ip_address"], $devices[$i]["user"], $devices[$i]["password"], $opt);
         }
-        echo "Команда выполнена";
+
+        if (is_array($ids)){
+            echo "Команда выполнена";
+        } else header("Location: /php/page/home.php");
     }
 
  }

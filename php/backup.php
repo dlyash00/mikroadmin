@@ -4,7 +4,7 @@
     require_once ROOT_DIR.'/core/mysql_db_connecting.php';
     require_once ROOT_DIR.'/core/app.php';
 
-    $query = ("SELECT `id_device`FROM device_backup");
+    $query = ("SELECT `id` FROM `device_user`");
     $result = mysqli_query($link, $query);
 
     $ids = array();
@@ -17,7 +17,7 @@
     $ids2 = array();
 
     foreach ($ids as $key => $value) {
-        array_push($ids2, $value["id_device"]);
+        array_push($ids2, $value["id"]);
     }
 
     App::GetBackupZip($ids2); 
