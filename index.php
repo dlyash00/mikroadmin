@@ -31,12 +31,38 @@
 			<form name = "auth" id = "auth" method = "POST" action = "php/auth.php">
 				<input type="text" form = "auth" name = "user-name" id = "inp-user-name" placeholder = "Имя пользователя"/>
 				<input type="password" form = "auth" name = "user-pass" id = "inp-user-pass" placeholder = "Пароль"/>
-				<input type="submit" name = "submit" form = "auth" title = "Вход"/>
+				<input type="submit" name = "submit" form = "auth" title = "Вход" id = "btn_enter_submit"/>
 			</form>
 		</div>
 		
 	</main>
 
 </div>
+<script src="js/jquery-3.6.0.min.js"></script>
+<script src="js/jquery-ui-1.12.1/jquery-ui.min.js"></script>
+<script src="js/crypto-js.min.js"></script>
+<script>
+	$('document').ready(function () {
+		$('#btn_enter_submit').click(function (e) { 
+			e.preventDefault();
+
+			let username = $('#inp-user-name').val();
+			let pass_hash = CryptoJS.MD5($('#inp-user-pass').val()).toString();
+			let array = {
+				username: username,
+				pass_hash: pass_hash
+			};
+
+			$.ajax({
+                type: "GET",
+                url: "php/auth.php",
+                data: {USER_ENTER: array},
+				success: function(res){
+					window.open(res);
+				}
+            });
+		});
+	});
+</script>
 </body>
 </html>
